@@ -1,6 +1,5 @@
 const API = `${window.location.origin}/api`;
 
-// Fecha y hora en tiempo real
 function actualizarReloj() {
   const ahora = new Date();
   document.getElementById('fecha').value = ahora.toLocaleDateString('es-MX');
@@ -9,7 +8,6 @@ function actualizarReloj() {
 actualizarReloj();
 setInterval(actualizarReloj, 1000);
 
-// Generar filas de integrantes según selector
 document.getElementById('num-integrantes').addEventListener('change', function () {
   renderIntegrantes(parseInt(this.value));
 });
@@ -29,19 +27,16 @@ function renderIntegrantes(n) {
 }
 
 function eliminarIntegrante(id) {
-  document.getElementById(`integrante-${id}`).remove();
-  renumerarFilas('lista-integrantes', 'integrante-', 'fila-num');
-  // Actualizar selector
-  const total = document.querySelectorAll('#lista-integrantes .fila-integrante').length;
-  document.getElementById('num-integrantes').value = total;
+  const elemento = document.getElementById(`integrante-${id}`);
+  if (elemento) elemento.remove();
+  document.getElementById('num-integrantes').value = document.querySelectorAll('#lista-integrantes .fila-integrante').length;
 }
 
-// Materiales
 let contadorMaterial = 1;
 
 function agregarMaterial() {
-  const contenedor = document.getElementById('lista-materiales');
   contadorMaterial++;
+  const contenedor = document.getElementById('lista-materiales');
   const div = document.createElement('div');
   div.className = 'fila-material';
   div.id = `material-${contadorMaterial}`;
@@ -56,18 +51,8 @@ function agregarMaterial() {
 function eliminarMaterial(id) {
   const el = document.getElementById(`material-${id}`);
   if (el) el.remove();
-  renumerarFilas('lista-materiales', 'material-', 'fila-num');
 }
 
-function renumerarFilas(contenedorId, prefijo, claseNum) {
-  const filas = document.querySelectorAll(`#${contenedorId} > div`);
-  filas.forEach((fila, idx) => {
-    const num = fila.querySelector(`.${claseNum}`);
-    if (num) num.textContent = idx + 1;
-  });
-}
-
-// Inicializar con 2 integrantes y 1 material
 renderIntegrantes(2);
 document.getElementById('lista-materiales').innerHTML = `
   <div class="fila-material" id="material-1">
@@ -77,31 +62,26 @@ document.getElementById('lista-materiales').innerHTML = `
     <div></div>
   </div>`;
 
-// Enviar registro
 async function enviarRegistro() {
   const laboratorio = document.getElementById('laboratorio').value;
   if (!laboratorio) return mostrarMensaje('Seleccione un laboratorio.', 'error');
 
-  const integrantes = [];
-  document.querySelectorAll('#lista-integrantes .fila-integrante').forEach(fila => {
-    const nombre = fila.querySelector('.nombre-integrante').value.trim();
-    const matricula = fila.querySelector('.matricula-integrante').value.trim();
-    integrantes.push({ nombre_completo: nombre, matricula });
-  });
+  const integrantes = Array.from(document.querySelectorAll('#lista-integrantes .fila-integrante')).map((fila) => ({
+    nombre_completo: fila.querySelector('.nombre-integrante').value.trim(),
+    matricula: fila.querySelector('.matricula-integrante').value.trim()
+  }));
 
-  const materiales = [];
-  document.querySelectorAll('#lista-materiales .fila-material').forEach(fila => {
-    const nombre = fila.querySelector('.nombre-material').value.trim();
-    const num = fila.querySelector('.num-material').value.trim();
-    materiales.push({ nombre_material: nombre, numero_registro: num });
-  });
+  const materiales = Array.from(document.querySelectorAll('#lista-materiales .fila-material')).map((fila) => ({
+    nombre_material: fila.querySelector('.nombre-material').value.trim(),
+    numero_registro: fila.querySelector('.num-material').value.trim()
+  }));
 
-  // Validaciones básicas en frontend
   for (const i of integrantes) {
     if (!i.nombre_completo || !i.matricula) {
       return mostrarMensaje('Complete nombre y matrícula de todos los integrantes.', 'error');
     }
   }
+
   for (const m of materiales) {
     if (!m.nombre_material || !m.numero_registro) {
       return mostrarMensaje('Complete nombre y número de registro de todos los materiales.', 'error');
@@ -116,6 +96,7 @@ async function enviarRegistro() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
+
     mostrarMensaje(`✓ Registro guardado correctamente. Folio: ${data.folio}`, 'exito');
     limpiarFormulario();
   } catch (err) {

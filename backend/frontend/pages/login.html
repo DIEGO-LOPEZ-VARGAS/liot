@@ -32,7 +32,6 @@
   <script>
     const API = `${window.location.origin}/api`;
 
-    // Si ya hay sesión, ir al panel
     if (localStorage.getItem('adminToken')) {
       window.location.href = '/admin';
     }

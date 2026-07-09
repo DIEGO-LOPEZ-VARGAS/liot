@@ -1,7 +1,6 @@
 const API = `${window.location.origin}/api`;
 const token = localStorage.getItem('adminToken');
 
-// Redirigir si no hay sesión
 if (!token) window.location.href = '/login';
 
 document.getElementById('nombre-admin').textContent =
@@ -11,7 +10,6 @@ function authHeaders() {
   return { 'Content-Type': 'application/json', 'Authorization': token };
 }
 
-// Cargar estadísticas
 async function cargarStats() {
   try {
     const res = await fetch(`${API}/registros/stats`, { headers: authHeaders() });
@@ -24,7 +22,6 @@ async function cargarStats() {
   } catch {}
 }
 
-// Cargar registros con filtros
 async function cargarRegistros() {
   const busqueda = document.getElementById('f-busqueda').value.trim();
   const laboratorio = document.getElementById('f-laboratorio').value;
@@ -75,7 +72,6 @@ function renderTabla(registros) {
   }).join('');
 }
 
-// Ver detalle de un registro
 async function verDetalle(id) {
   const panel = document.getElementById('detalle-contenido');
   panel.innerHTML = '<p style="color:#999;font-size:13px;text-align:center;padding:20px;">Cargando...</p>';
@@ -150,6 +146,5 @@ function cerrarSesion() {
   window.location.href = '/login';
 }
 
-// Inicializar
 cargarStats();
 cargarRegistros();

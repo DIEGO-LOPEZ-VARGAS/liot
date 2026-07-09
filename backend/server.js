@@ -8,7 +8,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Inicializar BD
 initDB().catch((err) => {
@@ -20,19 +20,19 @@ app.use('/api/registros', require('./routes/registros'));
 app.use('/api/auth', require('./routes/auth'));
 
 app.get('/registro', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/pages/registro.html'));
+  res.sendFile(path.join(__dirname, 'frontend/pages/registro.html'));
 });
 
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/pages/admin.html'));
+  res.sendFile(path.join(__dirname, 'frontend/pages/admin.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/pages/login.html'));
+  res.sendFile(path.join(__dirname, 'frontend/pages/login.html'));
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/pages/registro.html'));
+  res.sendFile(path.join(__dirname, 'frontend/pages/registro.html'));
 });
 
 const PORT = process.env.PORT || 3000;
