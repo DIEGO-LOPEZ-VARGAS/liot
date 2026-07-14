@@ -3,126 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Admin – Laboratorio IIoT</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <title>Admin – Laboratorio IIoT</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-
   <div class="header">
     <div class="header-logo">LAB IIoT</div>
     <div class="header-info">
-      <h1>Panel de registros del laboratorio IIoT</h1>
-      <p>Consulta de registros realizados por los alumnos</p>
-    </div>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
-      <span id="nombre-admin" style="font-size:13px;opacity:.85;"></span>
-      <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+      <h1>Panel Administrador</h1>
     </div>
   </div>
-
-  <div class="admin-wrapper">
-
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Registros de hoy</div>
-        <div class="stat-valor" id="stat-hoy">–</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Laboratorios activos</div>
-        <div class="stat-valor" id="stat-labs">–</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Materiales registrados</div>
-        <div class="stat-valor" id="stat-materiales">–</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Equipos atendidos</div>
-        <div class="stat-valor" id="stat-equipos">–</div>
-      </div>
-    </div>
-
-    <div class="filtros">
-      <div class="form-group">
-        <label>Buscar por matrícula o nombre</label>
-        <input type="text" id="f-busqueda" placeholder="Ej. A01234567 o Juan Pérez">
-      </div>
-      <div class="form-group">
-        <label>Laboratorio</label>
-        <select id="f-laboratorio">
-          <option value="">Todos los laboratorios</option>
-          <option>Lab IIoT – Edificio A</option>
-          <option>Lab IIoT – Edificio B</option>
-          <option>Lab IIoT – Edificio C</option>
-          <option>Lab IIoT – Edificio D</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Fecha</label>
-        <input type="date" id="f-fecha">
-      </div>
-      <div>
-        <button class="btn-primary" onclick="cargarRegistros()">Filtrar</button>
-      </div>
-      <div>
-        <button class="btn-secondary" onclick="limpiarFiltros()">Limpiar filtros</button>
-      </div>
-    </div>
-
-    <div class="admin-content">
-
-      <div class="seccion" style="overflow-x:auto;">
-        <div class="seccion-titulo">Registros guardados</div>
-        <table class="tabla-registros">
-          <thead>
-            <tr>
-              <th>Folio</th>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Laboratorio</th>
-              <th>Integrantes</th>
-              <th>Materiales</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-registros">
-            <tr><td colspan="8" style="text-align:center;color:#999;padding:20px;">Cargando...</td></tr>
-          </tbody>
-        </table>
-        <div id="msg-vacio" style="display:none;text-align:center;color:#999;padding:20px;font-size:13px;">
-          No se encontraron registros con los filtros aplicados.
-        </div>
-      </div>
-
-      <div class="panel-detalle">
-        <div id="detalle-contenido">
-          <p style="color:#999;font-size:13px;text-align:center;margin-top:40px;">
-            Seleccione un registro para ver el detalle
-          </p>
-        </div>
-      </div>
-
-    </div>
+  
+  <div id="qr-code" style="text-align: center; margin: 20px 0;"></div>
+  
+  <div class="container">
+    <div id="admin-content">Cargando...</div>
   </div>
 
   <script src="/js/admin.js"></script>
-<div id="qr-code" style="text-align: center; margin: 20px 0;"></div>
-</body>
-<div id="qr-code" style="text-align: center; margin: 20px 0;"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-  const url = window.location.href;
-  document.addEventListener('DOMContentLoaded', () => {
-    const qrContainer = document.getElementById('qr-code');
-    if (qrContainer) {
-      new QRCode(qrContainer, {
-        text: url,
-        width: 200,
-        height: 200
-      });
-    }
-  });
-</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const qrContainer = document.getElementById('qr-code');
+      if (qrContainer) {
+        new QRCode(qrContainer, {
+          text: window.location.href,
+          width: 200,
+          height: 200
+        });
+      }
+    });
+  </script>
 </body>
 </html>
