@@ -28,3 +28,12 @@
   </script>
 </body>
 </html>
+
+<div id="qr-code" style="text-align: center; margin: 20px 0;"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var qr = document.getElementById("qr-code");
+  if(qr) new QRCode(qr, {text: window.location.href, width: 200, height: 200});
+});
+</script>
