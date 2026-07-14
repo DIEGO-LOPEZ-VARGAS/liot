@@ -3,36 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin – Laboratorio IIoT</title>
+  <title>Admin</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div class="header">
-    <div class="header-logo">LAB IIoT</div>
-    <div class="header-info">
-      <h1>Panel Administrador</h1>
-    </div>
+    <h1>Panel Admin</h1>
   </div>
-  
   <div id="qr-code" style="text-align: center; margin: 20px 0;"></div>
-  
-  <div class="container">
-    <div id="admin-content">Cargando...</div>
-  </div>
-
+  <div class="container" id="admin-content">Cargando...</div>
   <script src="/js/admin.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const qrContainer = document.getElementById('qr-code');
-      if (qrContainer) {
-        new QRCode(qrContainer, {
-          text: window.location.href,
-          width: 200,
-          height: 200
-        });
-      }
-    });
-  </script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var qrContainer = document.getElementById('qr-code');
+    if (qrContainer) {
+      new QRCode(qrContainer, {
+        text: window.location.href,
+        width: 200,
+        height: 200
+      });
+    }
+  });
+  <\/script>
 </body>
 </html>
