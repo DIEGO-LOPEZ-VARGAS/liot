@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro – Laboratorio IIoT</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-logo">LAB IIoT</div>
+    <div class="header-info">
+      <h1>Registro de acceso al laboratorio IIoT</h1>
+      <p>Complete la información de su equipo y del material a utilizar</p>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Mensajes -->
+    <div id="mensaje" class="mensaje"></div>
+
+    <!-- 1. Datos generales -->
+    <div class="seccion">
+      <div class="seccion-titulo">1. Datos generales</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Laboratorio</label>
+          <select id="laboratorio">
+            <option value="">-- Seleccione --</option>
+            <option>Lab IIoT – Edificio A</option>
+            <option>Lab IIoT – Edificio B</option>
+            <option>Lab IIoT – Edificio C</option>
+            <option>Lab IIoT – Edificio D</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="text" id="fecha" readonly>
+        </div>
+        <div class="form-group">
+          <label>Hora</label>
+          <input type="text" id="hora" readonly>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Datos del equipo -->
+    <div class="seccion">
+      <div class="seccion-titulo">2. Datos del equipo</div>
+
+      <div class="form-group" style="max-width:200px; margin-bottom:16px;">
+        <label>Número de integrantes</label>
+        <select id="num-integrantes">
+          <option>1</option>
+          <option selected>2</option>
+          <option>3</option>
+          <option>4</option>
+          <option>5</option>
+          <option>6</option>
+        </select>
+      </div>
+
+      <div class="tabla-integrantes">
+        <div class="tabla-header">
+          <span>#</span>
+          <span>Nombre completo</span>
+          <span>Matrícula</span>
+          <span></span>
+        </div>
+        <div id="lista-integrantes"></div>
+      </div>
+    </div>
+
+    <!-- 3. Registro de material -->
+    <div class="seccion">
+      <div class="seccion-titulo">3. Registro de material</div>
+
+      <div class="tabla-materiales">
+        <div class="tabla-header">
+          <span>#</span>
+          <span>Material</span>
+          <span>Núm. de registro</span>
+          <span></span>
+        </div>
+        <div id="lista-materiales"></div>
+      </div>
+
+      <button class="btn-agregar" onclick="agregarMaterial()">+ Agregar material</button>
+    </div>
+
+    <!-- Acciones -->
+    <div class="seccion">
+      <div class="acciones">
+        <button class="btn-primary" onclick="enviarRegistro()">&#9992; Enviar registro</button>
+        <button class="btn-secondary" onclick="limpiarFormulario()">↺ Limpiar</button>
+        <div class="info-nota">ℹ El administrador podrá visualizar día, hora y laboratorio del registro.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../js/registro.js"></script>
+</body>
+</html>

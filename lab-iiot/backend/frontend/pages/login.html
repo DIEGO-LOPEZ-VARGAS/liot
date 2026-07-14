@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – Administrador IIoT</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="header-logo" style="text-align:center;margin-bottom:16px;display:block;">LAB IIoT</div>
+      <h2>Panel Administrativo</h2>
+      <p>Acceso restringido a profesores y administradores</p>
+
+      <div id="mensaje" class="mensaje" style="margin-bottom:14px;"></div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Usuario</label>
+        <input type="text" id="usuario" placeholder="admin" autocomplete="username">
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Contraseña</label>
+        <input type="password" id="contrasena" placeholder="••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') iniciarSesion()">
+      </div>
+
+      <button class="btn-primary" style="width:100%" onclick="iniciarSesion()">Iniciar sesión</button>
+    </div>
+  </div>
+
+  <script>
+    const API = `${window.location.origin}/api`;
+
+    if (localStorage.getItem('adminToken')) {
+      window.location.href = '/admin';
+    }
+
+    async function iniciarSesion() {
+      const usuario = document.getElementById('usuario').value.trim();
+      const contrasena = document.getElementById('contrasena').value;
+
+      if (!usuario || !contrasena) {
+        return mostrarMensaje('Ingrese usuario y contraseña.', 'error');
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, contrasena })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminNombre', data.nombre);
+        window.location.href = '/admin';
+      } catch (err) {
+        mostrarMensaje(err.message, 'error');
+      }
+    }
+
+    function mostrarMensaje(texto, tipo) {
+      const el = document.getElementById('mensaje');
+      el.textContent = texto;
+      el.className = `mensaje ${tipo}`;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
