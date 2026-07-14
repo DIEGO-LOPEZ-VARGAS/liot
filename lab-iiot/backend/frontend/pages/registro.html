@@ -102,5 +102,21 @@
   </div>
 
   <script src="/js/registro.js"></script>
+<div id="qr-code" style="text-align: center; margin: 20px 0;"></div>
 </body>
 </html>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const url = window.location.href;
+  document.addEventListener('DOMContentLoaded', () => {
+    const qrContainer = document.getElementById('qr-code');
+    if (qrContainer) {
+      new QRCode(qrContainer, {
+        text: url,
+        width: 200,
+        height: 200
+      });
+    }
+  });
+</script>
