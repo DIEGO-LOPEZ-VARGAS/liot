@@ -9,6 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
+app.use('/css', express.static(path.join(__dirname, 'frontend')));
+app.use('/js', express.static(path.join(__dirname, 'frontend/js')));
 
 // Inicializar BD
 initDB().catch((err) => {
