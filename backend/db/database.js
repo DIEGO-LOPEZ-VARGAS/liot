@@ -46,8 +46,10 @@ async function createTablesIfNotExist() {
         contrasena VARCHAR(255) NOT NULL,
         rol VARCHAR(30) DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
+    `);
 
+    await client.query(`
       CREATE TABLE IF NOT EXISTS registros (
         id SERIAL PRIMARY KEY,
         folio VARCHAR(20) NOT NULL UNIQUE,
@@ -60,27 +62,35 @@ async function createTablesIfNotExist() {
         integrantes JSONB,
         materiales JSONB,
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
+    `);
 
+    await client.query(`
       CREATE TABLE IF NOT EXISTS codigos_acceso (
         id SERIAL PRIMARY KEY,
         codigo VARCHAR(12) NOT NULL UNIQUE,
         creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
         expiracion TIMESTAMP NOT NULL,
         estado VARCHAR(20) NOT NULL DEFAULT 'Activo'
-      );
+      )
+    `);
 
+    await client.query(`
       CREATE TABLE IF NOT EXISTS materiales (
         id SERIAL PRIMARY KEY,
         nombre VARCHAR(120) NOT NULL UNIQUE,
         estado VARCHAR(20) NOT NULL DEFAULT 'Activo',
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
+    `);
 
-      INSERT INTO administradores (nombre, usuario, contrasena, rol)
-      VALUES ('Administrador', 'admin', $1, 'admin')
-      ON CONFLICT (usuario) DO NOTHING;
-    `, [bcrypt.hashSync('admin123', 10)]);
+    await client.query(
+      `INSERT INTO administradores (nombre, usuario, contrasena, rol)
+       VALUES ('Administrador', 'admin', $1, 'admin')
+       ON CONFLICT (usuario) DO NOTHING`,
+      [bcrypt.hashSync('admin123', 10)]
+    );
+
     console.log('✓ Tablas de PostgreSQL listas');
   } finally {
     client.release();
