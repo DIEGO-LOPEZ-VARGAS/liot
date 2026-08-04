@@ -60,16 +60,34 @@ async function crearRegistro(req, res) {
 
 async function generarCodigoAcceso(req, res) {
   const { expiracion_horas = 2 } = req.body;
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?';
-  let codigo = '';
-  for (let i = 0; i < 6; i++) {
-    codigo += chars[Math.floor(Math.random() * chars.length)];
-  }
-  const expiracion = new Date(Date.now() + Math.min(2, expiracion_horas) * 60 * 60 * 1000);
+  // Generate a 6-digit numeric code, cap expiration between 1 and 24 hours
+  const digits = '0123456789';
+  const length = 6;
+  const maxAttempts = 5;
+
+  const horas = Math.max(1, Math.min(24, Number(expiracion_horas) || 2));
+  const expiracion = new Date(Date.now() + horas * 60 * 60 * 1000);
 
   try {
-    const nuevoCodigo = await createAccessCode({ codigo, expiracion: expiracion.toISOString() });
-    res.status(201).json(nuevoCodigo);
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let codigo = '';
+      for (let i = 0; i < length; i++) {
+        codigo += digits[Math.floor(Math.random() * digits.length)];
+      }
+
+      try {
+        const nuevoCodigo = await createAccessCode({ codigo, expiracion: expiracion.toISOString() });
+        return res.status(201).json(nuevoCodigo);
+      } catch (err) {
+        // If duplicate key in Postgres, retry; otherwise propagate
+        if (err && err.code === '23505') continue; // unique_violation
+        // For JSON storage or other errors, log and return
+        console.error(err);
+        return res.status(500).json({ error: 'Error al generar el código de acceso' });
+      }
+    }
+
+    return res.status(500).json({ error: 'No se pudo generar un código único, intente de nuevo' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al generar el código de acceso' });
