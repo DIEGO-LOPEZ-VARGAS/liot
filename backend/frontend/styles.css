@@ -522,7 +522,64 @@ body {
 
   .input-row input {
     flex: 1;
-/* RESPONSIVE */
+    min-width: 0;
+  }
+
+  .material-item button,
+  .panel-section button,
+  .btn-secondary,
+  .btn-primary {
+    transition: background 0.2s, transform 0.2s;
+  }
+
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .material-item button:hover,
+  .panel-section button:hover {
+    transform: translateY(-1px);
+  }
+
+  .login-card input,
+  .login-card button {
+    width: 100%;
+  }
+
+  .login-card button {
+    margin-top: 12px;
+  }
+
+  .materiales-lista {
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .panel-detalle {
+    box-shadow: 0 20px 40px rgba(13, 74, 107, 0.08);
+  }
+
+  .tabla-registros th,
+  .tabla-registros td {
+    white-space: nowrap;
+  }
+
+  .tabla-registros {
+    min-width: 720px;
+  }
+
+  /* RESPONSIVE */
+@media (max-width: 1024px) {
+  .header {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .header-info {
+    flex: 1 1 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-content { grid-template-columns: 1fr; }
