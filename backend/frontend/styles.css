@@ -475,23 +475,53 @@ body {
   flex-wrap: wrap;
 }
 
-.admin-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
+  .panel-section {
+    margin-bottom: 24px;
+  }
 
-.btn-logout {
-  background: none;
-  border: 1px solid #c5cdd8;
-  border-radius: 6px;
-  padding: 7px 14px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #555;
-}
+  .panel-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a4a6b;
+    margin-bottom: 12px;
+  }
 
+  .material-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f7fbfc;
+    border: 1px solid #dde3ec;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+  .materiales-lista {
+    margin-top: 14px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .info-text {
+    color: #555;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .input-row input {
+    flex: 1;
 /* RESPONSIVE */
 @media (max-width: 768px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }

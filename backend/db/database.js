@@ -56,8 +56,24 @@ async function createTablesIfNotExist() {
         estado VARCHAR(20) DEFAULT 'Completado',
         fecha DATE NOT NULL,
         hora TIME NOT NULL,
+        codigo_acceso VARCHAR(20) NOT NULL,
         integrantes JSONB,
         materiales JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS codigos_acceso (
+        id SERIAL PRIMARY KEY,
+        codigo VARCHAR(12) NOT NULL UNIQUE,
+        creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
+        expiracion TIMESTAMP NOT NULL,
+        estado VARCHAR(20) NOT NULL DEFAULT 'Activo'
+      );
+
+      CREATE TABLE IF NOT EXISTS materiales (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(120) NOT NULL UNIQUE,
+        estado VARCHAR(20) NOT NULL DEFAULT 'Activo',
         created_at TIMESTAMP DEFAULT NOW()
       );
 
@@ -87,10 +103,44 @@ async function initJSONStore() {
         }
       ],
       registros: [],
-      nextId: 1
+      codigos_acceso: [],
+      materiales: [],
+      nextId: 1,
+      nextCodigoId: 1,
+      nextMaterialId: 1
     };
     await fs.writeFile(DATA_FILE, JSON.stringify(store, null, 2));
+    return store;
   }
+  return readJSONStore();
+}
+
+async function ensureStore() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.access(DATA_FILE);
+  } catch {
+    return initJSONStore();
+  }
+
+  const store = await readJSONStore();
+
+  if (!Array.isArray(store.administradores)) store.administradores = [];
+  if (!Array.isArray(store.registros)) store.registros = [];
+  if (!Array.isArray(store.codigos_acceso)) store.codigos_acceso = [];
+  if (!Array.isArray(store.materiales)) store.materiales = [];
+  if (typeof store.nextId !== 'number') {
+    store.nextId = Math.max(0, ...store.registros.map((r) => r.id_registro || 0)) + 1;
+  }
+  if (typeof store.nextCodigoId !== 'number') {
+    store.nextCodigoId = Math.max(0, ...store.codigos_acceso.map((c) => c.id_codigo || 0)) + 1;
+  }
+  if (typeof store.nextMaterialId !== 'number') {
+    store.nextMaterialId = Math.max(0, ...store.materiales.map((m) => m.id_material || 0)) + 1;
+  }
+
+  await writeJSONStore(store);
+  return store;
 }
 
 async function readJSONStore() {
@@ -100,6 +150,27 @@ async function readJSONStore() {
 
 async function writeJSONStore(store) {
   await fs.writeFile(DATA_FILE, JSON.stringify(store, null, 2));
+}
+
+function updateCodeStatuses(store) {
+  const now = new Date().toISOString();
+  let changed = false;
+  if (!Array.isArray(store.codigos_acceso)) return false;
+  for (const item of store.codigos_acceso) {
+    if (item.estado === 'Activo' && item.expiracion && item.expiracion < now) {
+      item.estado = 'Expirado';
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+async function loadStore() {
+  const store = await ensureStore();
+  if (updateCodeStatuses(store)) {
+    await writeJSONStore(store);
+  }
+  return store;
 }
 
 async function verifyAdminCredentials(usuario, contrasena) {
@@ -118,17 +189,17 @@ async function verifyAdminCredentials(usuario, contrasena) {
   return valid ? admin : null;
 }
 
-async function createRegistro({ laboratorio, integrantes, materiales }) {
+async function createRegistro({ laboratorio, integrantes, materiales, codigo_acceso }) {
   const fecha = new Date().toISOString().split('T')[0];
   const hora = new Date().toTimeString().split(' ')[0];
 
   if (pool && !useJSON) {
     const folio = `REG-${Date.now()}`;
     const result = await pool.query(
-      `INSERT INTO registros (folio, laboratorio, numero_integrantes, estado, fecha, hora, integrantes, materiales)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id as id_registro, folio, laboratorio, numero_integrantes, estado, fecha, hora, integrantes, materiales`,
-      [folio, laboratorio, integrantes.length, 'Completado', fecha, hora, JSON.stringify(integrantes), JSON.stringify(materiales)]
+      `INSERT INTO registros (folio, laboratorio, numero_integrantes, estado, fecha, hora, codigo_acceso, integrantes, materiales)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id as id_registro, folio, laboratorio, numero_integrantes, estado, fecha, hora, codigo_acceso, integrantes, materiales`,
+      [folio, laboratorio, integrantes.length, 'Completado', fecha, hora, codigo_acceso, JSON.stringify(integrantes), JSON.stringify(materiales)]
     );
     return { ...result.rows[0], integrantes, materiales };
   }
@@ -142,6 +213,7 @@ async function createRegistro({ laboratorio, integrantes, materiales }) {
     estado: 'Completado',
     fecha,
     hora,
+    codigo_acceso,
     integrantes,
     materiales
   };
@@ -195,10 +267,13 @@ async function listRegistros(filtros = {}) {
   if (filtros.busqueda) {
     const texto = filtros.busqueda.toLowerCase();
     registros = registros.filter((r) => {
-      const integrantes = r.integrantes.some((i) =>
+      const coincidenciaIntegrante = r.integrantes.some((i) =>
         `${i.nombre_completo} ${i.matricula}`.toLowerCase().includes(texto)
       );
-      return integrantes;
+      const coincidenciaMaterial = r.materiales.some((m) =>
+        (m.nombre_material || m.nombre || '').toLowerCase().includes(texto)
+      );
+      return coincidenciaIntegrante || coincidenciaMaterial;
     });
   }
 
@@ -254,11 +329,152 @@ async function getStats() {
   };
 }
 
+async function createAccessCode({ codigo, expiracion }) {
+  if (pool && !useJSON) {
+    const result = await pool.query(
+      `INSERT INTO codigos_acceso (codigo, expiracion, estado)
+       VALUES ($1, $2, 'Activo')
+       RETURNING id as id_codigo, codigo, creado_en, expiracion, estado`,
+      [codigo, expiracion]
+    );
+    return result.rows[0];
+  }
+
+  const store = await readJSONStore();
+  const newCode = {
+    id_codigo: store.nextCodigoId,
+    codigo,
+    creado_en: new Date().toISOString(),
+    expiracion,
+    estado: 'Activo'
+  };
+  store.codigos_acceso.push(newCode);
+  store.nextCodigoId += 1;
+  await writeJSONStore(store);
+  return newCode;
+}
+
+async function getAccessCodeByCodigo(codigo) {
+  if (pool && !useJSON) {
+    const result = await pool.query(
+      `SELECT id, codigo, creado_en, expiracion, estado FROM codigos_acceso WHERE codigo = $1`,
+      [codigo]
+    );
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    if (new Date(row.expiracion) < new Date() && row.estado !== 'Expirado') {
+      await pool.query(`UPDATE codigos_acceso SET estado = 'Expirado' WHERE id = $1`, [row.id]);
+      row.estado = 'Expirado';
+    }
+    return { id_codigo: row.id, codigo: row.codigo, creado_en: row.creado_en, expiracion: row.expiracion, estado: row.estado };
+  }
+
+  const store = await loadStore();
+  const codigoItem = store.codigos_acceso.find((item) => item.codigo === codigo);
+  return codigoItem || null;
+}
+
+async function validateAccessCode(codigo) {
+  const accessCode = await getAccessCodeByCodigo(codigo);
+  if (!accessCode) return null;
+  if (accessCode.estado !== 'Activo' || new Date(accessCode.expiracion) < new Date()) {
+    return null;
+  }
+  return accessCode;
+}
+
+async function listAccessCodes() {
+  if (pool && !useJSON) {
+    const result = await pool.query(
+      `SELECT id as id_codigo, codigo, creado_en, expiracion,
+        CASE WHEN expiracion < NOW() THEN 'Expirado' ELSE estado END as estado
+       FROM codigos_acceso ORDER BY creado_en DESC`
+    );
+    return result.rows;
+  }
+
+  const store = await loadStore();
+  return [...store.codigos_acceso].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+}
+
+async function createMaterial(nombre) {
+  if (!nombre) throw new Error('Nombre de material requerido');
+  if (pool && !useJSON) {
+    const result = await pool.query(
+      `INSERT INTO materiales (nombre, estado)
+       VALUES ($1, 'Activo')
+       RETURNING id as id_material, nombre, estado, created_at`,
+      [nombre.trim()]
+    );
+    return result.rows[0];
+  }
+
+  const store = await readJSONStore();
+  const material = {
+    id_material: store.nextMaterialId,
+    nombre: nombre.trim(),
+    estado: 'Activo',
+    created_at: new Date().toISOString()
+  };
+  store.materiales.push(material);
+  store.nextMaterialId += 1;
+  await writeJSONStore(store);
+  return material;
+}
+
+async function listMaterials({ onlyActive = false } = {}) {
+  if (pool && !useJSON) {
+    const query = onlyActive
+      ? `SELECT id as id_material, nombre, estado, created_at FROM materiales WHERE estado = 'Activo' ORDER BY created_at DESC`
+      : `SELECT id as id_material, nombre, estado, created_at FROM materiales ORDER BY created_at DESC`;
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  const store = await loadStore();
+  const items = Array.isArray(store.materiales) ? store.materiales : [];
+  return onlyActive ? items.filter((item) => item.estado === 'Activo') : [...items].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+async function deleteMaterial(id) {
+  if (pool && !useJSON) {
+    await pool.query(`UPDATE materiales SET estado = 'Eliminado' WHERE id = $1`, [id]);
+    return;
+  }
+
+  const store = await loadStore();
+  const index = store.materiales.findIndex((item) => item.id_material === Number(id));
+  if (index !== -1) {
+    store.materiales[index].estado = 'Eliminado';
+    await writeJSONStore(store);
+  }
+}
+
+async function getMaterialById(id) {
+  if (pool && !useJSON) {
+    const result = await pool.query(
+      `SELECT id as id_material, nombre, estado, created_at FROM materiales WHERE id = $1 AND estado = 'Activo'`,
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
+  const store = await loadStore();
+  return store.materiales.find((item) => item.id_material === Number(id) && item.estado === 'Activo') || null;
+}
+
 module.exports = {
   initDB,
   verifyAdminCredentials,
   createRegistro,
   listRegistros,
   getRegistro,
-  getStats
+  getStats,
+  createAccessCode,
+  listAccessCodes,
+  validateAccessCode,
+  createMaterial,
+  listMaterials,
+  deleteMaterial,
+  getMaterialById
 };

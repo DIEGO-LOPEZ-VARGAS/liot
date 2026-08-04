@@ -139,6 +139,104 @@ function limpiarFiltros() {
   cargarRegistros();
 }
 
+async function generarCodigoAcceso() {
+  try {
+    const res = await fetch(`${API}/registros/codigos`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ expiracion_horas: 2 })
+    });
+
+    if (res.status === 401) { cerrarSesion(); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'No se pudo generar el código');
+
+    document.getElementById('nuevo-codigo').value = data.codigo;
+    document.getElementById('codigo-expiracion').textContent = `Expira el ${new Date(data.expiracion).toLocaleString('es-MX')}`;
+    mostrarMensajeAdmin('Código generado correctamente', 'exito');
+    cargarMaterialesAdmin();
+  } catch (err) {
+    mostrarMensajeAdmin('Error: ' + err.message, 'error');
+  }
+}
+
+async function cargarMaterialesAdmin() {
+  try {
+    const res = await fetch(`${API}/registros/materiales/gestion`, { headers: authHeaders() });
+    if (res.status === 401) { cerrarSesion(); return; }
+    const materiales = await res.json();
+    renderMaterialesAdmin(materiales);
+  } catch {
+    document.getElementById('materiales-lista').innerHTML = '<p style="color:#c00;">Error al cargar materiales.</p>';
+  }
+}
+
+function renderMaterialesAdmin(materiales) {
+  const contenedor = document.getElementById('materiales-lista');
+  if (!materiales.length) {
+    contenedor.innerHTML = '<p style="color:#555; margin-top:12px;">No hay materiales registrados.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = materiales.map((material) => `
+    <div class="material-item">
+      <span>${material.nombre}</span>
+      <button class="btn-eliminar" onclick="eliminarMaterial(${material.id_material})">Eliminar</button>
+    </div>
+  `).join('');
+}
+
+async function crearMaterial() {
+  const nombre = document.getElementById('material-nuevo').value.trim();
+  if (!nombre) {
+    mostrarMensajeAdmin('Escribe el nombre del material.', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/registros/materiales`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ nombre })
+    });
+    if (res.status === 401) { cerrarSesion(); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'No se pudo crear el material');
+
+    document.getElementById('material-nuevo').value = '';
+    cargarMaterialesAdmin();
+    mostrarMensajeAdmin('Material agregado correctamente.', 'exito');
+  } catch (err) {
+    mostrarMensajeAdmin('Error: ' + err.message, 'error');
+  }
+}
+
+async function eliminarMaterial(id) {
+  try {
+    const res = await fetch(`${API}/registros/materiales/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    if (res.status === 401) { cerrarSesion(); return; }
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'No se pudo eliminar el material');
+    }
+    cargarMaterialesAdmin();
+    mostrarMensajeAdmin('Material eliminado.', 'exito');
+  } catch (err) {
+    mostrarMensajeAdmin('Error: ' + err.message, 'error');
+  }
+}
+
+function mostrarMensajeAdmin(texto, tipo) {
+  const el = document.getElementById('codigo-mensaje');
+  el.textContent = texto;
+  el.className = `mensaje ${tipo}`;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
 function cerrarSesion() {
   fetch(`${API}/auth/logout`, { method: 'POST', headers: authHeaders() });
   localStorage.removeItem('adminToken');
@@ -148,3 +246,4 @@ function cerrarSesion() {
 
 cargarStats();
 cargarRegistros();
+cargarMaterialesAdmin();

@@ -95,6 +95,29 @@
       </div>
 
       <div class="panel-detalle">
+        <div class="panel-section">
+          <div class="panel-section-title">Nueva Clase</div>
+          <div class="form-group">
+            <label>Código temporal de acceso</label>
+            <div class="input-row">
+              <input type="text" id="nuevo-codigo" readonly placeholder="Genera un código...">
+              <button class="btn-primary" onclick="generarCodigoAcceso()">Generar código</button>
+            </div>
+            <div id="codigo-expiracion" class="info-text"></div>
+          </div>
+          <div id="codigo-mensaje" class="mensaje" style="display:none;margin-top:10px;"></div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-title">Gestión de materiales</div>
+          <div class="form-group">
+            <label>Nuevo material</label>
+            <input type="text" id="material-nuevo" placeholder="Ej. Laptop">
+          </div>
+          <button class="btn-secondary" onclick="crearMaterial()">Agregar material</button>
+          <div id="materiales-lista" class="materiales-lista"></div>
+        </div>
+
         <div id="detalle-contenido">
           <p style="color:#999;font-size:13px;text-align:center;margin-top:40px;">
             Seleccione un registro para ver el detalle

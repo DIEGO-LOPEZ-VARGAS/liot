@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node lab-iiot/backend/server.js"
+    "start": "node backend/server.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
