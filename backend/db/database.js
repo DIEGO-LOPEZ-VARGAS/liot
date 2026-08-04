@@ -347,7 +347,14 @@ async function createAccessCode({ codigo, expiracion }) {
        RETURNING id as id_codigo, codigo, creado_en, expiracion, estado`,
       [codigo, expiracion]
     );
-    return result.rows[0];
+    const row = result.rows[0];
+    return {
+      id_codigo: row.id_codigo || row.id,
+      codigo: row.codigo,
+      creado_en: row.creado_en ? new Date(row.creado_en).toISOString() : null,
+      expiracion: row.expiracion ? new Date(row.expiracion).toISOString() : null,
+      estado: row.estado
+    };
   }
 
   const store = await readJSONStore();
@@ -376,7 +383,13 @@ async function getAccessCodeByCodigo(codigo) {
       await pool.query(`UPDATE codigos_acceso SET estado = 'Expirado' WHERE id = $1`, [row.id]);
       row.estado = 'Expirado';
     }
-    return { id_codigo: row.id, codigo: row.codigo, creado_en: row.creado_en, expiracion: row.expiracion, estado: row.estado };
+    return {
+      id_codigo: row.id,
+      codigo: row.codigo,
+      creado_en: row.creado_en ? new Date(row.creado_en).toISOString() : null,
+      expiracion: row.expiracion ? new Date(row.expiracion).toISOString() : null,
+      estado: row.estado
+    };
   }
 
   const store = await loadStore();
@@ -400,7 +413,13 @@ async function listAccessCodes() {
         CASE WHEN expiracion < NOW() THEN 'Expirado' ELSE estado END as estado
        FROM codigos_acceso ORDER BY creado_en DESC`
     );
-    return result.rows;
+    return result.rows.map((row) => ({
+      id_codigo: row.id_codigo,
+      codigo: row.codigo,
+      creado_en: row.creado_en ? new Date(row.creado_en).toISOString() : null,
+      expiracion: row.expiracion ? new Date(row.expiracion).toISOString() : null,
+      estado: row.estado
+    }));
   }
 
   const store = await loadStore();
