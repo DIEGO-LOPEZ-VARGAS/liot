@@ -59,7 +59,7 @@ function renderTabla(registros) {
       : r.estado === 'En proceso' ? 'badge-proceso' : 'badge-cancelado';
     const fecha = new Date(r.fecha).toLocaleDateString('es-MX');
     const hora = r.hora.slice(0, 5);
-    return `<tr onclick="verDetalle(${r.id_registro})">
+    return `<tr onclick="verDetalle(${r.id})">
       <td class="folio-link">${r.folio}</td>
       <td>${fecha}</td>
       <td>${hora}</td>
@@ -67,7 +67,7 @@ function renderTabla(registros) {
       <td style="text-align:center">${r.numero_integrantes}</td>
       <td style="text-align:center">${r.total_materiales}</td>
       <td><span class="badge ${badgeClass}">${r.estado}</span></td>
-      <td><button class="btn-ver" onclick="event.stopPropagation();verDetalle(${r.id_registro})">Ver detalle</button></td>
+      <td><button class="btn-ver" onclick="event.stopPropagation();verDetalle(${r.id})">Ver detalle</button></td>
     </tr>`;
   }).join('');
 }
