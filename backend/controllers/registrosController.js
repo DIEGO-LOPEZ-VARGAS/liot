@@ -1,1 +1,216 @@
-const {\n  createRegistro: guardarRegistro,\n  listRegistros,\n  getRegistro,\n  getStats,\n  validateAccessCode,\n  getMaterialById,\n  createAccessCode,\n  listAccessCodes,\n  createMaterial,\n  listMaterials,\n  deleteMaterial\n} = require('../db/database');\n\n// POST /api/registros - Crear nuevo registro\nasync function crearRegistro(req, res) {\n  const { laboratorio, integrantes, materiales, codigo_acceso } = req.body;\n\n  if (!laboratorio || !integrantes || !materiales || !codigo_acceso) {\n    return res.status(400).json({ error: 'Faltan campos obligatorios' });\n  }\n\n  if (!Array.isArray(integrantes) || integrantes.length === 0) {\n    return res.status(400).json({ error: 'Debe registrar al menos un integrante' });\n  }\n\n  if (!Array.isArray(materiales) || materiales.length === 0) {\n    return res.status(400).json({ error: 'Debe seleccionar al menos un material' });\n  }\n\n  for (const i of integrantes) {\n    if (!i.nombre_completo || !i.matricula) {\n      return res.status(400).json({ error: 'Todos los integrantes deben tener nombre y matrícula' });\n    }\n  }\n\n  for (const m of materiales) {\n    if (!m.id_material || !m.nombre_material || !m.numero_registro) {\n      return res.status(400).json({ error: 'Material inválido. Selecciona un material activo y agrega su número de registro.' });\n    }\n    const materialActivo = await getMaterialById(m.id_material);\n    if (!materialActivo) {\n      return res.status(400).json({ error: 'Material seleccionado no válido o inactivo' });\n    }\n  }\n\n  try {\n    const codigoValido = await validateAccessCode(codigo_acceso);\n    if (!codigoValido) {\n      return res.status(400).json({ error: 'Código inválido o expirado. Solicita uno nuevo al profesor.' });\n    }\n\n    const registro = await guardarRegistro({ laboratorio, integrantes, materiales, codigo_acceso });\n    res.status(201).json({ mensaje: 'Registro guardado correctamente', folio: registro.folio });\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al guardar el registro' });\n  }\n}\n\nfunction formatearFechaLocal(fecha) {\n  // Formatear fecha en timezone local (América/México_City)\n  return new Intl.DateTimeFormat('es-MX', {\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n    hour: '2-digit',\n    minute: '2-digit',\n    second: '2-digit',\n    hour12: true,\n    timeZone: 'America/Mexico_City'\n  }).format(fecha);\n}\n\nasync function generarCodigoAcceso(req, res) {\n  const { expiracion_horas = 2 } = req.body;\n  // Generate a 6-digit numeric code, cap expiration between 1 and 24 hours\n  const digits = '0123456789';\n  const length = 6;\n  const maxAttempts = 5;\n\n  const horas = Math.max(1, Math.min(24, Number(expiracion_horas) || 2));\n  const expiracion = new Date(Date.now() + horas * 60 * 60 * 1000);\n\n  try {\n    for (let attempt = 0; attempt < maxAttempts; attempt++) {\n      let codigo = '';\n      for (let i = 0; i < length; i++) {\n        codigo += digits[Math.floor(Math.random() * digits.length)];\n      }\n\n      try {\n        const nuevoCodigo = await createAccessCode({ codigo, expiracion: expiracion.toISOString() });\n        // Agregar la hora formateada localmente\n        nuevoCodigo.expiracion_formateada = formatearFechaLocal(expiracion);\n        return res.status(201).json(nuevoCodigo);\n      } catch (err) {\n        // If duplicate key in Postgres, retry; otherwise propagate\n        if (err && err.code === '23505') continue; // unique_violation\n        // For JSON storage or other errors, log and return\n        console.error(err);\n        return res.status(500).json({ error: 'Error al generar el código de acceso' });\n      }\n    }\n\n    return res.status(500).json({ error: 'No se pudo generar un código único, intente de nuevo' });\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al generar el código de acceso' });\n  }\n}\n\nasync function listarCodigos(req, res) {\n  try {\n    const codigos = await listAccessCodes();\n    res.json(codigos);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al obtener los códigos de acceso' });\n  }\n}\n\nasync function listarMaterialesPublic(req, res) {\n  try {\n    const materiales = await listMaterials({ onlyActive: true });\n    res.json(materiales);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al obtener materiales' });\n  }\n}\n\nasync function listarMaterialesAdmin(req, res) {\n  try {\n    const materiales = await listMaterials({ onlyActive: false });\n    res.json(materiales);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al obtener materiales' });\n  }\n}\n\nasync function crearMaterialHandler(req, res) {\n  const { nombre } = req.body;\n  if (!nombre || !nombre.trim()) {\n    return res.status(400).json({ error: 'Nombre del material requerido' });\n  }\n\n  try {\n    const materialesExistentes = await listMaterials({ onlyActive: false });\n    const duplicado = materialesExistentes.some((m) => m.nombre.toLowerCase() === nombre.trim().toLowerCase());\n    if (duplicado) {\n      return res.status(400).json({ error: 'El material ya existe' });\n    }\n    const material = await createMaterial(nombre.trim());\n    res.status(201).json(material);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al crear el material' });\n  }\n}\n\nasync function eliminarMaterialHandler(req, res) {\n  const { id } = req.params;\n  try {\n    await deleteMaterial(id);\n    res.status(204).send();\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al eliminar el material' });\n  }\n}\n\n// GET /api/registros - Listar registros (admin)\nasync function listarRegistrosHandler(req, res) {\n  try {\n    const { fecha, laboratorio, busqueda } = req.query;\n    const registros = await listRegistros({ fecha, laboratorio, busqueda });\n    res.json(registros);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al obtener registros' });\n  }\n}\n\n// GET /api/registros/:id - Detalle de un registro\nasync function obtenerRegistro(req, res) {\n  const { id } = req.params;\n  try {\n    const registro = await getRegistro(id);\n    if (!registro) return res.status(404).json({ error: 'Registro no encontrado' });\n\n    res.json(registro);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al obtener el registro' });\n  }\n}\n\n// GET /api/registros/stats - Estadísticas para el panel\nasync function obtenerStats(req, res) {\n  try {\n    const stats = await getStats();\n    res.json(stats);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: 'Error al obtener estadísticas' });\n  }\n}\n\nmodule.exports = {\n  crearRegistro,\n  listarRegistros: listarRegistrosHandler,\n  obtenerRegistro,\n  obtenerStats,\n  generarCodigoAcceso,\n  listarCodigos,\n  listarMaterialesPublic,\n  listarMaterialesAdmin,\n  crearMaterialHandler,\n  eliminarMaterialHandler\n};\n
+const {
+  createRegistro: guardarRegistro,
+  listRegistros,
+  getRegistro,
+  getStats,
+  validateAccessCode,
+  getMaterialById,
+  createAccessCode,
+  listAccessCodes,
+  createMaterial,
+  listMaterials,
+  deleteMaterial
+} = require('../db/database');
+
+function formatLocalDate(date) {
+  return new Intl.DateTimeFormat('es-MX', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZone: 'America/Mexico_City'
+  }).format(date);
+}
+
+async function crearRegistro(req, res) {
+  const { laboratorio, integrantes, materiales, codigo_acceso } = req.body;
+
+  if (!laboratorio || !integrantes || !materiales || !codigo_acceso) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  }
+
+  if (!Array.isArray(integrantes) || integrantes.length === 0) {
+    return res.status(400).json({ error: 'Debe registrar al menos un integrante' });
+  }
+
+  if (!Array.isArray(materiales) || materiales.length === 0) {
+    return res.status(400).json({ error: 'Debe seleccionar al menos un material' });
+  }
+
+  for (const integrante of integrantes) {
+    if (!integrante.nombre_completo || !integrante.matricula) {
+      return res.status(400).json({ error: 'Todos los integrantes deben tener nombre y matricula' });
+    }
+  }
+
+  for (const material of materiales) {
+    if (!material.id_material || !material.nombre_material || !material.numero_registro) {
+      return res.status(400).json({ error: 'Material invalido. Selecciona un material activo y agrega su numero de registro.' });
+    }
+    const materialActivo = await getMaterialById(material.id_material);
+    if (!materialActivo) {
+      return res.status(400).json({ error: 'Material seleccionado no valido o inactivo' });
+    }
+  }
+
+  try {
+    const codigoValido = await validateAccessCode(codigo_acceso);
+    if (!codigoValido) {
+      return res.status(400).json({ error: 'Codigo invalido o expirado. Solicita uno nuevo al profesor.' });
+    }
+
+    const registro = await guardarRegistro({ laboratorio, integrantes, materiales, codigo_acceso });
+    return res.status(201).json({ mensaje: 'Registro guardado correctamente', folio: registro.folio });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al guardar el registro' });
+  }
+}
+
+async function generarCodigoAcceso(req, res) {
+  const { expiracion_horas = 2 } = req.body;
+  const digits = '0123456789';
+  const length = 6;
+  const maxAttempts = 5;
+
+  const horas = Math.max(1, Math.min(24, Number(expiracion_horas) || 2));
+  const expiracion = new Date(Date.now() + horas * 60 * 60 * 1000);
+
+  try {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      let codigo = '';
+      for (let i = 0; i < length; i += 1) {
+        codigo += digits[Math.floor(Math.random() * digits.length)];
+      }
+
+      try {
+        const nuevoCodigo = await createAccessCode({ codigo, expiracion: expiracion.toISOString() });
+        nuevoCodigo.expiracion_formateada = formatLocalDate(expiracion);
+        return res.status(201).json(nuevoCodigo);
+      } catch (err) {
+        if (err && err.code === '23505') {
+          continue;
+        }
+        console.error(err);
+        return res.status(500).json({ error: 'Error al generar el codigo de acceso' });
+      }
+    }
+
+    return res.status(500).json({ error: 'No se pudo generar un codigo unico, intente de nuevo' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al generar el codigo de acceso' });
+  }
+}
+
+async function listarCodigos(req, res) {
+  try {
+    const codigos = await listAccessCodes();
+    return res.json(codigos);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener los codigos de acceso' });
+  }
+}
+
+async function listarMaterialesPublic(req, res) {
+  try {
+    const materiales = await listMaterials({ onlyActive: true });
+    return res.json(materiales);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener materiales' });
+  }
+}
+
+async function listarMaterialesAdmin(req, res) {
+  try {
+    const materiales = await listMaterials({ onlyActive: false });
+    return res.json(materiales);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener materiales' });
+  }
+}
+
+async function crearMaterialHandler(req, res) {
+  const { nombre } = req.body;
+  if (!nombre || !nombre.trim()) {
+    return res.status(400).json({ error: 'Nombre del material requerido' });
+  }
+
+  try {
+    const materialesExistentes = await listMaterials({ onlyActive: false });
+    const duplicado = materialesExistentes.some((m) => m.nombre.toLowerCase() === nombre.trim().toLowerCase());
+    if (duplicado) {
+      return res.status(400).json({ error: 'El material ya existe' });
+    }
+    const material = await createMaterial(nombre.trim());
+    return res.status(201).json(material);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al crear el material' });
+  }
+}
+
+async function eliminarMaterialHandler(req, res) {
+  const { id } = req.params;
+  try {
+    await deleteMaterial(id);
+    return res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al eliminar el material' });
+  }
+}
+
+async function listarRegistrosHandler(req, res) {
+  try {
+    const { fecha, laboratorio, busqueda } = req.query;
+    const registros = await listRegistros({ fecha, laboratorio, busqueda });
+    return res.json(registros);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener registros' });
+  }
+}
+
+async function obtenerRegistro(req, res) {
+  const { id } = req.params;
+  try {
+    const registro = await getRegistro(id);
+    if (!registro) {
+      return res.status(404).json({ error: 'Registro no encontrado' });
+    }
+    return res.json(registro);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener el registro' });
+  }
+}
+
+async function obtenerStats(req, res) {
+  try {
+    const stats = await getStats();
+    return res.json(stats);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener estadisticas' });
+  }
+}
+
+module.exports = {
+  crearRegistro,
+  listarRegistros: listarRegistrosHandler,
+  obtenerRegistro,
+  obtenerStats,
+  generarCodigoAcceso,
+  listarCodigos,
+  listarMaterialesPublic,
+  listarMaterialesAdmin,
+  crearMaterialHandler,
+  eliminarMaterialHandler
+};
