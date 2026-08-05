@@ -152,20 +152,7 @@ async function generarCodigoAcceso() {
     if (!res.ok) throw new Error(data.error || 'No se pudo generar el código');
 
     document.getElementById('nuevo-codigo').value = data.codigo;
-    
-    // Arreglar la hora de expiración usando formato completo con timezone
-    const expiracionDate = new Date(data.expiracion);
-    const opcionesFormato = {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    };
-    const expiracionFormato = expiracionDate.toLocaleString('es-MX', opcionesFormato);
-    document.getElementById('codigo-expiracion').textContent = `Expira el ${expiracionFormato}`;
+    document.getElementById('codigo-expiracion').textContent = `Expira el ${data.expiracion_formateada}`;
     
     mostrarMensajeAdmin('Código generado correctamente', 'exito');
     await cargarMaterialesAdmin();
@@ -253,7 +240,6 @@ async function eliminarMaterial(id) {
       throw new Error(data.error || 'No se pudo eliminar el material');
     }
     
-    // Esperar a que se carguen los materiales actualizados
     await cargarMaterialesAdmin();
     mostrarMensajeAdmin('Material eliminado.', 'exito');
   } catch (err) {
