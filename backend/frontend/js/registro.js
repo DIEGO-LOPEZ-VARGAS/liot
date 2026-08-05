@@ -52,6 +52,85 @@ async function cargarMaterialesActivas() {
 
 renderIntegrantes(2);
 
+// Manejo de múltiples materiales
+function inicializarMateriales() {
+  renderMaterialesSeleccionados();
+  document.getElementById('btn-agregar-material').addEventListener('click', agregarMaterialALista);
+}
+
+function renderMaterialesSeleccionados() {
+  const contenedor = document.getElementById('lista-materiales-seleccionados');
+  const materiales = obtenerMateriailesDelForm();
+  
+  if (materiales.length === 0) {
+    contenedor.innerHTML = '<p style="color:#999;font-size:13px;">No hay materiales agregados</p>';
+    return;
+  }
+  
+  contenedor.innerHTML = materiales.map((m, idx) => `
+    <div class="material-fila" data-idx="${idx}">
+      <div style="flex:1;">
+        <strong>${m.nombre_material}</strong> (Reg: ${m.numero_registro})
+      </div>
+      <button type="button" class="btn-eliminar" onclick="eliminarMaterialDelForm(${idx})" title="Eliminar">✕</button>
+    </div>
+  `).join('');
+}
+
+function agregarMaterialALista() {
+  const selectMaterial = document.getElementById('material-seleccionado');
+  const numeroRegistro = document.getElementById('numero-registro-material');
+  
+  const id_material = selectMaterial.value;
+  const nombre_material = selectMaterial.options[selectMaterial.selectedIndex]?.text;
+  const numero_registro = numeroRegistro.value.trim();
+  
+  if (!id_material) {
+    mostrarMensaje('Selecciona un material.', 'error');
+    return;
+  }
+  
+  if (!numero_registro) {
+    mostrarMensaje('Agrega el número de registro del material.', 'error');
+    return;
+  }
+  
+  // Obtener lista actual
+  let materiales = JSON.parse(localStorage.getItem('_materiales_temp') || '[]');
+  
+  // Verificar duplicado
+  if (materiales.some(m => m.id_material == id_material && m.numero_registro === numero_registro)) {
+    mostrarMensaje('Este material con este número de registro ya está agregado.', 'error');
+    return;
+  }
+  
+  materiales.push({
+    id_material: Number(id_material),
+    nombre_material,
+    numero_registro
+  });
+  
+  localStorage.setItem('_materiales_temp', JSON.stringify(materiales));
+  
+  // Limpiar inputs
+  selectMaterial.value = '';
+  numeroRegistro.value = '';
+  
+  renderMaterialesSeleccionados();
+  mostrarMensaje('Material agregado ✓', 'exito');
+}
+
+function eliminarMaterialDelForm(idx) {
+  let materiales = JSON.parse(localStorage.getItem('_materiales_temp') || '[]');
+  materiales.splice(idx, 1);
+  localStorage.setItem('_materiales_temp', JSON.stringify(materiales));
+  renderMaterialesSeleccionados();
+}
+
+function obtenerMateriailesDelForm() {
+  return JSON.parse(localStorage.getItem('_materiales_temp') || '[]');
+}
+
 async function enviarRegistro() {
   const laboratorio = document.getElementById('laboratorio').value;
   if (!laboratorio) return mostrarMensaje('Seleccione un laboratorio.', 'error');
@@ -59,13 +138,8 @@ async function enviarRegistro() {
   const codigo_acceso = document.getElementById('codigo-acceso').value.trim();
   if (!codigo_acceso) return mostrarMensaje('Ingresa el código de acceso.', 'error');
 
-  const materialSeleccionado = document.getElementById('material-seleccionado');
-  const id_material = materialSeleccionado.value;
-  const nombre_material = materialSeleccionado.options[materialSeleccionado.selectedIndex]?.text || '';
-  if (!id_material) return mostrarMensaje('Selecciona un material activo.', 'error');
-
-  const numero_registro = document.getElementById('numero-registro-material').value.trim();
-  if (!numero_registro) return mostrarMensaje('Agrega el número de registro del material.', 'error');
+  const materiales = obtenerMateriailesDelForm();
+  if (materiales.length === 0) return mostrarMensaje('Agrega al menos un material.', 'error');
 
   const integrantes = Array.from(document.querySelectorAll('#lista-integrantes .fila-integrante')).map((fila) => ({
     nombre_completo: fila.querySelector('.nombre-integrante').value.trim(),
@@ -77,12 +151,6 @@ async function enviarRegistro() {
       return mostrarMensaje('Complete nombre y matrícula de todos los integrantes.', 'error');
     }
   }
-
-  const materiales = [{
-    id_material: Number(id_material),
-    nombre_material,
-    numero_registro
-  }];
 
   try {
     const res = await fetch(`${API}/registros`, {
@@ -107,9 +175,12 @@ function limpiarFormulario() {
   document.getElementById('codigo-acceso').value = '';
   document.getElementById('material-seleccionado').value = '';
   document.getElementById('numero-registro-material').value = '';
+  localStorage.removeItem('_materiales_temp');
+  renderMaterialesSeleccionados();
 }
 
 cargarMaterialesActivas();
+inicializarMateriales();
 
 function mostrarMensaje(texto, tipo) {
   const el = document.getElementById('mensaje');
@@ -119,3 +190,4 @@ function mostrarMensaje(texto, tipo) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
+
