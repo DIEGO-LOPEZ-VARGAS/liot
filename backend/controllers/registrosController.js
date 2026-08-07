@@ -128,7 +128,7 @@ async function listarMaterialesPublic(req, res) {
 
 async function listarMaterialesAdmin(req, res) {
   try {
-    const materiales = await listMaterials({ onlyActive: false });
+    const materiales = await listMaterials({ onlyActive: true });
     return res.json(materiales);
   } catch (err) {
     console.error(err);
