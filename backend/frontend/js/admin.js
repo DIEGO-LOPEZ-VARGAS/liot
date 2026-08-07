@@ -157,7 +157,8 @@ async function generarCodigoAcceso() {
     document.getElementById('codigo-expiracion').textContent = `Expira el ${data.expiracion_formateada}`;
     document.getElementById('codigo-estado').textContent = `Estado: ${data.estado || 'Activo'}`;
     localStorage.setItem('admin_last_codigo', data.codigo);
-    localStorage.setItem('admin_last_codigo_expiracion', data.expiracion_formateada || data.expiracion);
+    localStorage.setItem('admin_last_codigo_expiracion_formateada', data.expiracion_formateada || '');
+    localStorage.setItem('admin_last_codigo_expiracion_raw', data.expiracion || '');
     localStorage.setItem('admin_last_codigo_estado', data.estado || 'Activo');
 
     mostrarMensajeAdmin('Código generado correctamente', 'exito');
@@ -191,7 +192,7 @@ function renderCodigosActivos(codigos) {
   }
 
   contenedor.innerHTML = codigos.map((codigo) => {
-    const expiracion = codigo.expiracion_formateada || new Date(codigo.expiracion).toLocaleString('es-MX');
+    const expiracion = codigo.expiracion_formateada || codigo.expiracion || 'Sin expiración';
     return `
       <div class="codigo-item">
         <div><strong>${codigo.codigo}</strong> — <span>${expiracion}</span></div>
@@ -302,19 +303,32 @@ function formatCodigoEstado(estado, expiracion) {
   return `Estado: ${estado || 'Activo'}`;
 }
 
+function formatLocalDateTime(dateValue) {
+  if (!dateValue) return '';
+  return new Date(dateValue).toLocaleString('es-MX', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZone: 'America/Mexico_City'
+  });
+}
+
 function loadSavedCodigoGenerado() {
   const codigo = localStorage.getItem('admin_last_codigo');
-  const expiracion = localStorage.getItem('admin_last_codigo_expiracion');
+  const expiracionFormateada = localStorage.getItem('admin_last_codigo_expiracion_formateada');
+  const expiracionRaw = localStorage.getItem('admin_last_codigo_expiracion_raw');
   const estado = localStorage.getItem('admin_last_codigo_estado');
   if (!codigo) return;
 
-  const expiracionTexto = expiracion
-    ? (expiracion.includes('T') ? new Date(expiracion).toLocaleString('es-MX') : expiracion)
-    : '';
-
   document.getElementById('nuevo-codigo').value = codigo;
-  document.getElementById('codigo-expiracion').textContent = expiracionTexto ? `Expira el ${expiracionTexto}` : '';
-  document.getElementById('codigo-estado').textContent = formatCodigoEstado(estado, expiracion);
+  document.getElementById('codigo-expiracion').textContent = expiracionFormateada
+    ? `Expira el ${expiracionFormateada}`
+    : expiracionRaw ? `Expira el ${formatLocalDateTime(expiracionRaw)}` : '';
+  document.getElementById('codigo-estado').textContent = formatCodigoEstado(estado, expiracionRaw);
 }
 
 function cerrarSesion() {
