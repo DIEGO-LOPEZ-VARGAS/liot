@@ -64,6 +64,7 @@ function renderTabla(registros) {
       <td>${fecha}</td>
       <td>${hora}</td>
       <td>${r.laboratorio}</td>
+      <td style="text-align:center">${r.codigo_acceso || ''}</td>
       <td style="text-align:center">${r.numero_integrantes}</td>
       <td style="text-align:center">${r.total_materiales}</td>
       <td><span class="badge ${badgeClass}">${r.estado}</span></td>
@@ -93,6 +94,7 @@ async function verDetalle(id) {
 
       <div class="detalle-meta">
         <div class="detalle-meta-item"><label>Laboratorio</label>${r.laboratorio}</div>
+        <div class="detalle-meta-item"><label>Código</label>${r.codigo_acceso || 'N/A'}</div>
         <div class="detalle-meta-item"><label>Integrantes</label>${r.numero_integrantes}</div>
         <div class="detalle-meta-item"><label>Fecha</label>${fecha}</div>
         <div class="detalle-meta-item"><label>Hora</label>${hora}</div>
@@ -153,12 +155,50 @@ async function generarCodigoAcceso() {
 
     document.getElementById('nuevo-codigo').value = data.codigo;
     document.getElementById('codigo-expiracion').textContent = `Expira el ${data.expiracion_formateada}`;
-    
+    document.getElementById('codigo-estado').textContent = `Estado: ${data.estado || 'Activo'}`;
+    localStorage.setItem('admin_last_codigo', data.codigo);
+    localStorage.setItem('admin_last_codigo_expiracion', data.expiracion_formateada || data.expiracion);
+    localStorage.setItem('admin_last_codigo_estado', data.estado || 'Activo');
+
     mostrarMensajeAdmin('Código generado correctamente', 'exito');
+    await cargarCodigosActivos();
     await cargarMaterialesAdmin();
   } catch (err) {
     mostrarMensajeAdmin('Error: ' + err.message, 'error');
   }
+}
+
+async function cargarCodigosActivos() {
+  try {
+    const res = await fetch(`${API}/registros/codigos`, { headers: authHeaders() });
+    if (res.status === 401) { cerrarSesion(); return; }
+    const codigos = await res.json();
+    renderCodigosActivos(codigos);
+  } catch (err) {
+    console.error('Error cargando códigos:', err);
+    const el = document.getElementById('codigos-lista');
+    if (el) el.innerHTML = '<p style="color:#c00;">Error al cargar códigos.</p>';
+  }
+}
+
+function renderCodigosActivos(codigos) {
+  const contenedor = document.getElementById('codigos-lista');
+  if (!contenedor) return;
+
+  if (!codigos || codigos.length === 0) {
+    contenedor.innerHTML = '<p style="color:#555; margin-top:12px;">No hay códigos activos.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = codigos.map((codigo) => {
+    const expiracion = codigo.expiracion_formateada || new Date(codigo.expiracion).toLocaleString('es-MX');
+    return `
+      <div class="codigo-item">
+        <div><strong>${codigo.codigo}</strong> — <span>${expiracion}</span></div>
+        <div class="codigo-estado">${codigo.estado}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function cargarMaterialesAdmin() {
@@ -255,6 +295,28 @@ function mostrarMensajeAdmin(texto, tipo) {
   setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
+function formatCodigoEstado(estado, expiracion) {
+  const fechaExpiracion = expiracion && expiracion.includes('T') ? new Date(expiracion) : null;
+  const isExpired = fechaExpiracion ? fechaExpiracion.getTime() < Date.now() : false;
+  if (isExpired) return 'Estado: Expirado';
+  return `Estado: ${estado || 'Activo'}`;
+}
+
+function loadSavedCodigoGenerado() {
+  const codigo = localStorage.getItem('admin_last_codigo');
+  const expiracion = localStorage.getItem('admin_last_codigo_expiracion');
+  const estado = localStorage.getItem('admin_last_codigo_estado');
+  if (!codigo) return;
+
+  const expiracionTexto = expiracion
+    ? (expiracion.includes('T') ? new Date(expiracion).toLocaleString('es-MX') : expiracion)
+    : '';
+
+  document.getElementById('nuevo-codigo').value = codigo;
+  document.getElementById('codigo-expiracion').textContent = expiracionTexto ? `Expira el ${expiracionTexto}` : '';
+  document.getElementById('codigo-estado').textContent = formatCodigoEstado(estado, expiracion);
+}
+
 function cerrarSesion() {
   fetch(`${API}/auth/logout`, { method: 'POST', headers: authHeaders() });
   localStorage.removeItem('adminToken');
@@ -265,4 +327,6 @@ function cerrarSesion() {
 cargarStats();
 cargarRegistros();
 cargarMaterialesAdmin();
+cargarCodigosActivos();
+loadSavedCodigoGenerado();
 

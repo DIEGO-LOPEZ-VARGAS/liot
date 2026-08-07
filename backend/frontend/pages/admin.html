@@ -79,6 +79,7 @@
               <th>Fecha</th>
               <th>Hora</th>
               <th>Laboratorio</th>
+              <th>Código</th>
               <th>Integrantes</th>
               <th>Materiales</th>
               <th>Estado</th>
@@ -86,7 +87,7 @@
             </tr>
           </thead>
           <tbody id="tbody-registros">
-            <tr><td colspan="8" style="text-align:center;color:#999;padding:20px;">Cargando...</td></tr>
+            <tr><td colspan="9" style="text-align:center;color:#999;padding:20px;">Cargando...</td></tr>
           </tbody>
         </table>
         <div id="msg-vacio" style="display:none;text-align:center;color:#999;padding:20px;font-size:13px;">
@@ -104,6 +105,11 @@
               <button class="btn-primary" onclick="generarCodigoAcceso()">Generar código</button>
             </div>
             <div id="codigo-expiracion" class="info-text"></div>
+            <div id="codigo-estado" class="info-text"></div>
+          </div>
+          <div class="form-group">
+            <label>Códigos de acceso activos</label>
+            <div id="codigos-lista" class="codigos-lista"></div>
           </div>
           <div id="codigo-mensaje" class="mensaje" style="display:none;margin-top:10px;"></div>
         </div>
